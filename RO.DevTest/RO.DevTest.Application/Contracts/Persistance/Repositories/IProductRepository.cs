@@ -1,8 +1,9 @@
 using RO.DevTest.Domain.Entities;
+using System.Linq;
 
 namespace RO.DevTest.Application.Contracts.Persistance.Repositories;
 
 public interface IProductRepository : IBaseRepository<Product>
 {
-    // Additional product-specific repository methods can be added here
+    IQueryable<Product> GetAll();
 }

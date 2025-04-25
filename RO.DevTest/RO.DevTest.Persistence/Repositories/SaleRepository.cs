@@ -1,6 +1,7 @@
 using RO.DevTest.Application.Contracts.Persistance.Repositories;
 using RO.DevTest.Domain.Entities;
 using RO.DevTest.Persistence;
+using System.Linq;
 
 namespace RO.DevTest.Persistence.Repositories;
 
@@ -10,5 +11,7 @@ public class SaleRepository : BaseRepository<Sale>, ISaleRepository
     {
     }
 
-    // Additional sale-specific repository methods can be implemented here
+    public IQueryable<Sale> GetAll() {
+        return Context.Set<Sale>();
+    }
 }

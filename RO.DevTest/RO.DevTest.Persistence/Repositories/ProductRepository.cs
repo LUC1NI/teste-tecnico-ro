@@ -1,6 +1,7 @@
 using RO.DevTest.Application.Contracts.Persistance.Repositories;
 using RO.DevTest.Domain.Entities;
 using RO.DevTest.Persistence;
+using System.Linq;
 
 namespace RO.DevTest.Persistence.Repositories;
 
@@ -10,5 +11,7 @@ public class ProductRepository : BaseRepository<Product>, IProductRepository
     {
     }
 
-    // Additional product-specific repository methods can be implemented here
+    public IQueryable<Product> GetAll() {
+        return Context.Set<Product>();
+    }
 }
