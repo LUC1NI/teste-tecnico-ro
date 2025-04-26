@@ -1,0 +1,104 @@
+@page "/salesreport"
+@inject HttpClient Http
+
+<h3>Relatório de Vendas por Período</h3>
+
+<EditForm Model="reportRequest" OnValidSubmit="HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="mb-3">
+        <label for="startDate" class="form-label">Data Inicial</label>
+        <InputDate id="startDate" class="form-control" @bind-Value="reportRequest.StartDate" />
+    </div>
+
+    <div class="mb-3">
+        <label for="endDate" class="form-label">Data Final</label>
+        <InputDate id="endDate" class="form-control" @bind-Value="reportRequest.EndDate" />
+    </div>
+
+    <button type="submit" class="btn btn-primary">Buscar Relatório</button>
+</EditForm>
+
+@if (salesReport == null)
+{
+    <p>Preencha o formulário e envie para buscar o relatório.</p>
+}
+else if (salesReport.Count == 0)
+{
+    <p>Nenhuma venda encontrada no período informado.</p>
+}
+else
+{
+    <table class="table table-striped mt-3">
+        <thead>
+            <tr>
+                <th>Cliente</th>
+                <th>Data</th>
+                <th>Itens Vendidos</th>
+                <th>Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var sale in salesReport)
+            {
+                <tr>
+                    <td>@sale.ClientName</td>
+                    <td>@sale.Date.ToString("dd/MM/yyyy")</td>
+                    <td>
+                        <ul>
+                            @foreach (var item in sale.Items)
+                            {
+                                <li>@item.ProductName - @item.Quantity</li>
+                            }
+                        </ul>
+                    </td>
+                    <td>@sale.Total.ToString("C")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private ReportRequest reportRequest = new ReportRequest
+    {
+        StartDate = DateTime.Today.AddMonths(-1),
+        EndDate = DateTime.Today
+    };
+
+    private List<SaleModel>? salesReport;
+
+    private async Task HandleValidSubmit()
+    {
+        var response = await Http.GetAsync($"api/sales/report?startDate={reportRequest.StartDate:yyyy-MM-dd}&endDate={reportRequest.EndDate:yyyy-MM-dd}");
+        if (response.IsSuccessStatusCode)
+        {
+            salesReport = await response.Content.ReadFromJsonAsync<List<SaleModel>>();
+        }
+        else
+        {
+            salesReport = new List<SaleModel>();
+        }
+    }
+
+    private class ReportRequest
+    {
+        public DateTime StartDate { get; set; }
+        public DateTime EndDate { get; set; }
+    }
+
+    private class SaleModel
+    {
+        public string ClientName { get; set; } = string.Empty;
+        public DateTime Date { get; set; }
+        public List<SaleItemModel> Items { get; set; } = new();
+        public decimal Total { get; set; }
+    }
+
+    private class SaleItemModel
+    {
+        public string ProductName { get; set; } = string.Empty;
+        public int Quantity { get; set; }
+    }
+}

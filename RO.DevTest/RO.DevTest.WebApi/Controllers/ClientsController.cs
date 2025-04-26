@@ -51,3 +51,8 @@ public class ClientsController : Controller {
         return NoContent();
     }
 }
+
+internal class GetClientByIdQuery : IRequest<object>
+{
+    public Guid Id { get; set; }
+}

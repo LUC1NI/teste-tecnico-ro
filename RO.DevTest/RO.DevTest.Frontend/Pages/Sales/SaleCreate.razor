@@ -1,0 +1,242 @@
+@page "/sales/create"
+@inject HttpClient Http
+
+<h3>Criar Venda</h3>
+
+@if (clients == null || products == null)
+{
+    <p>Carregando dados...</p>
+}
+else
+{
+    <EditForm OnValidSubmit="HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <label for="clientSelect" class="form-label">Cliente</label>
+            <select id="clientSelect" class="form-select" @bind="selectedClientId" required>
+                <option value="">Selecione um cliente</option>
+                @foreach (var client in clients)
+                {
+                    <option value="@client.Id">@client.Name</option>
+                }
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label for="productSelect" class="form-label">Produto</label>
+            <select id="productSelect" class="form-select" @bind="selectedProductId">
+                <option value="">Selecione um produto</option>
+                @foreach (var product in products)
+                {
+                    <option value="@product.Id">@product.Name (@product.StockQuantity em estoque)</option>
+                }
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label for="quantity" class="form-label">Quantidade</label>
+            <InputNumber id="quantity" class="form-control" @bind-Value="quantity" min="1" />
+        </div>
+
+        <button type="button" class="btn btn-secondary mb-3" @onclick="AddToCart" disabled="@(!CanAddToCart)">Adicionar ao Carrinho</button>
+
+        <h5>Carrinho</h5>
+        @if (cartItems.Count == 0)
+        {
+            <p>Carrinho vazio.</p>
+        }
+        else
+        {
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Produto</th>
+                        <th>Quantidade</th>
+                        <th>Preço Unitário</th>
+                        <th>Total</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in cartItems)
+                    {
+                        <tr>
+                            <td>@item.ProductName</td>
+                            <td>@item.Quantity</td>
+                            <td>@item.UnitPrice.ToString("C")</td>
+                            <td>@(item.UnitPrice * item.Quantity).ToString("C")</td>
+                            <td><button class="btn btn-danger btn-sm" @onclick="() => RemoveFromCart(item.ProductId)">Remover</button></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            <p><strong>Total da Venda: </strong>@cartItems.Sum(i => i.UnitPrice * i.Quantity).ToString("C")</p>
+        }
+
+        <button type="submit" class="btn btn-primary" disabled="@(cartItems.Count == 0 || string.IsNullOrEmpty(selectedClientId))">Finalizar Venda</button>
+    </EditForm>
+
+    @if (successMessage != null)
+    {
+        <div class="alert alert-success mt-3">@successMessage</div>
+    }
+
+    @if (errorMessage != null)
+    {
+        <div class="alert alert-danger mt-3">@errorMessage</div>
+    }
+}
+
+@code {
+    private List<ClientModel>? clients;
+    private List<ProductModel>? products;
+
+    private string? selectedClientId;
+    private string? selectedProductId;
+    private int quantity = 1;
+
+    private List<CartItem> cartItems = new();
+
+    private string? successMessage;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadClients();
+        await LoadProducts();
+    }
+
+    private async Task LoadClients()
+    {
+        var response = await Http.GetAsync("api/clients");
+        if (response.IsSuccessStatusCode)
+        {
+            clients = await response.Content.ReadFromJsonAsync<List<ClientModel>>();
+        }
+    }
+
+    private async Task LoadProducts()
+    {
+        var response = await Http.GetAsync("api/products");
+        if (response.IsSuccessStatusCode)
+        {
+            products = await response.Content.ReadFromJsonAsync<List<ProductModel>>();
+        }
+    }
+
+    private bool CanAddToCart =>
+        !string.IsNullOrEmpty(selectedProductId) && quantity > 0 &&
+        products?.Any(p => p.Id == selectedProductId && p.StockQuantity >= quantity) == true;
+
+    private void AddToCart()
+    {
+        if (!CanAddToCart)
+            return;
+
+        var product = products!.First(p => p.Id == selectedProductId);
+        var existingItem = cartItems.FirstOrDefault(i => i.ProductId == selectedProductId);
+        if (existingItem != null)
+        {
+            existingItem.Quantity += quantity;
+        }
+        else
+        {
+            cartItems.Add(new CartItem
+            {
+                ProductId = product.Id,
+                ProductName = product.Name,
+                Quantity = quantity,
+                UnitPrice = product.Price
+            });
+        }
+
+        quantity = 1;
+        selectedProductId = null;
+    }
+
+    private void RemoveFromCart(string productId)
+    {
+        var item = cartItems.FirstOrDefault(i => i.ProductId == productId);
+        if (item != null)
+        {
+            cartItems.Remove(item);
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        successMessage = null;
+        errorMessage = null;
+
+        if (string.IsNullOrEmpty(selectedClientId) || cartItems.Count == 0)
+        {
+            errorMessage = "Selecione um cliente e adicione produtos ao carrinho.";
+            return;
+        }
+
+        var saleRequest = new CreateSaleRequest
+        {
+            ClientId = selectedClientId,
+            Items = cartItems.Select(i => new SaleItem
+            {
+                ProductId = i.ProductId,
+                Quantity = i.Quantity
+            }).ToList()
+        };
+
+        try
+        {
+            var response = await Http.PostAsJsonAsync("api/sales", saleRequest);
+            if (response.IsSuccessStatusCode)
+            {
+                successMessage = "Venda criada com sucesso!";
+                cartItems.Clear();
+                selectedClientId = null;
+            }
+            else
+            {
+                errorMessage = $"Erro ao criar venda: {response.ReasonPhrase}";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Erro: {ex.Message}";
+        }
+    }
+
+    private class ClientModel
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+    }
+
+    private class ProductModel
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public decimal Price { get; set; }
+        public int StockQuantity { get; set; }
+    }
+
+    private class CartItem
+    {
+        public string ProductId { get; set; } = string.Empty;
+        public string ProductName { get; set; } = string.Empty;
+        public int Quantity { get; set; }
+        public decimal UnitPrice { get; set; }
+    }
+
+    private class CreateSaleRequest
+    {
+        public string ClientId { get; set; } = string.Empty;
+        public List<SaleItem> Items { get; set; } = new();
+    }
+
+    private class SaleItem
+    {
+        public string ProductId { get; set; } = string.Empty;
+        public int Quantity { get; set; }
+    }
+}

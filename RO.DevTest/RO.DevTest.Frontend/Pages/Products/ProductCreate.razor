@@ -1,0 +1,80 @@
+@page "/products/create"
+@inject HttpClient Http
+
+<h3>Criar Produto</h3>
+
+<EditForm Model="product" OnValidSubmit="HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="mb-3">
+        <label for="name" class="form-label">Nome</label>
+        <InputText id="name" class="form-control" @bind-Value="product.Name" />
+    </div>
+
+    <div class="mb-3">
+        <label for="description" class="form-label">Descrição</label>
+        <InputTextArea id="description" class="form-control" @bind-Value="product.Description" />
+    </div>
+
+    <div class="mb-3">
+        <label for="price" class="form-label">Preço</label>
+        <InputNumber id="price" class="form-control" @bind-Value="product.Price" />
+    </div>
+
+    <div class="mb-3">
+        <label for="stock" class="form-label">Quantidade em Estoque</label>
+        <InputNumber id="stock" class="form-control" @bind-Value="product.StockQuantity" />
+    </div>
+
+    <button type="submit" class="btn btn-primary">Criar</button>
+</EditForm>
+
+@if (successMessage != null)
+{
+    <div class="alert alert-success mt-3">@successMessage</div>
+}
+
+@if (errorMessage != null)
+{
+    <div class="alert alert-danger mt-3">@errorMessage</div>
+}
+
+@code {
+    private ProductCreateModel product = new ProductCreateModel();
+
+    private string? successMessage;
+    private string? errorMessage;
+
+    private async Task HandleValidSubmit()
+    {
+        successMessage = null;
+        errorMessage = null;
+
+        try
+        {
+            var response = await Http.PostAsJsonAsync("api/products", product);
+            if (response.IsSuccessStatusCode)
+            {
+                successMessage = "Produto criado com sucesso!";
+                product = new ProductCreateModel(); // reset form
+            }
+            else
+            {
+                errorMessage = $"Erro ao criar produto: {response.ReasonPhrase}";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Erro: {ex.Message}";
+        }
+    }
+
+    public class ProductCreateModel
+    {
+        public string Name { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public decimal Price { get; set; }
+        public int StockQuantity { get; set; }
+    }
+}

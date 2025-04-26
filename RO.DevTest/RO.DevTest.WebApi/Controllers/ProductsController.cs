@@ -7,6 +7,7 @@ using RO.DevTest.Application.Features.Product.Commands.DeleteProductCommand;
 using RO.DevTest.Application.Features.Product.Queries.GetProductsQuery;
 using System;
 using System.Threading.Tasks;
+using RO.DevTest.Application.Features.Product.Queries.GetProductByIdQuery;
 
 namespace RO.DevTest.WebApi.Controllers;
 

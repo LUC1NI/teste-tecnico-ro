@@ -1,0 +1,80 @@
+@page "/sales/list"
+@inject HttpClient Http
+
+<h3>Lista de Vendas</h3>
+
+@if (sales == null)
+{
+    <p>Carregando...</p>
+}
+else if (sales.Count == 0)
+{
+    <p>Nenhuma venda encontrada.</p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Cliente</th>
+                <th>Data</th>
+                <th>Itens Vendidos</th>
+                <th>Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var sale in sales)
+            {
+                <tr>
+                    <td>@sale.ClientName</td>
+                    <td>@sale.Date.ToString("dd/MM/yyyy")</td>
+                    <td>
+                        <ul>
+                            @foreach (var item in sale.Items)
+                            {
+                                <li>@item.ProductName - @item.Quantity</li>
+                            }
+                        </ul>
+                    </td>
+                    <td>@sale.Total.ToString("C")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<SaleModel>? sales;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSales();
+    }
+
+    private async Task LoadSales()
+    {
+        var response = await Http.GetAsync("api/sales");
+        if (response.IsSuccessStatusCode)
+        {
+            sales = await response.Content.ReadFromJsonAsync<List<SaleModel>>();
+        }
+        else
+        {
+            sales = new List<SaleModel>();
+        }
+    }
+
+    private class SaleModel
+    {
+        public string ClientName { get; set; } = string.Empty;
+        public DateTime Date { get; set; }
+        public List<SaleItemModel> Items { get; set; } = new();
+        public decimal Total { get; set; }
+    }
+
+    private class SaleItemModel
+    {
+        public string ProductName { get; set; } = string.Empty;
+        public int Quantity { get; set; }
+    }
+}

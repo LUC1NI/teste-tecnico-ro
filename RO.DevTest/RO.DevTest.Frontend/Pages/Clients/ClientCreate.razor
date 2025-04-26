@@ -1,0 +1,80 @@
+@page "/clients/create"
+@inject HttpClient Http
+
+<h3>Criar Cliente</h3>
+
+<EditForm Model="client" OnValidSubmit="HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="mb-3">
+        <label for="name" class="form-label">Nome</label>
+        <InputText id="name" class="form-control" @bind-Value="client.Name" />
+    </div>
+
+    <div class="mb-3">
+        <label for="email" class="form-label">Email</label>
+        <InputText id="email" type="email" class="form-control" @bind-Value="client.Email" />
+    </div>
+
+    <div class="mb-3">
+        <label for="cpf" class="form-label">CPF</label>
+        <InputText id="cpf" class="form-control" @bind-Value="client.CPF" />
+    </div>
+
+    <div class="mb-3">
+        <label for="dob" class="form-label">Data de Nascimento</label>
+        <InputDate id="dob" class="form-control" @bind-Value="client.DateOfBirth" />
+    </div>
+
+    <button type="submit" class="btn btn-primary">Criar</button>
+</EditForm>
+
+@if (successMessage != null)
+{
+    <div class="alert alert-success mt-3">@successMessage</div>
+}
+
+@if (errorMessage != null)
+{
+    <div class="alert alert-danger mt-3">@errorMessage</div>
+}
+
+@code {
+    private ClientCreateModel client = new ClientCreateModel();
+
+    private string? successMessage;
+    private string? errorMessage;
+
+    private async Task HandleValidSubmit()
+    {
+        successMessage = null;
+        errorMessage = null;
+
+        try
+        {
+            var response = await Http.PostAsJsonAsync("api/clients", client);
+            if (response.IsSuccessStatusCode)
+            {
+                successMessage = "Cliente criado com sucesso!";
+                client = new ClientCreateModel(); // reset form
+            }
+            else
+            {
+                errorMessage = $"Erro ao criar cliente: {response.ReasonPhrase}";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Erro: {ex.Message}";
+        }
+    }
+
+    public class ClientCreateModel
+    {
+        public string Name { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string CPF { get; set; } = string.Empty;
+        public DateTime DateOfBirth { get; set; } = DateTime.Today;
+    }
+}

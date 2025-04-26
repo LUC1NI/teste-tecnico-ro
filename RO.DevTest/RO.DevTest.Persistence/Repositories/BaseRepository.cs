@@ -15,18 +15,19 @@ public class BaseRepository<T>(DefaultContext defaultContext) : IBaseRepository<
         return entity;
     }
 
-    public async void Update(T entity) {
+    public async Task Update(T entity) {
         Context.Set<T>().Update(entity);
         await Context.SaveChangesAsync();
     }
 
-    public async void Delete(T entity) {
+    public async Task Delete(T entity) {
         Context.Set<T>().Remove(entity);
         await Context.SaveChangesAsync();
     }
 
-    public T? Get(Expression<Func<T, bool>> predicate, params Expression<Func<T, object>>[] includes)
-    => GetQueryWithIncludes(predicate, includes).FirstOrDefault();
+    public async Task<T?> GetAsync(Expression<Func<T, bool>> predicate, params Expression<Func<T, object>>[] includes) {
+        return await GetQueryWithIncludes(predicate, includes).FirstOrDefaultAsync();
+    }
 
     /// <summary>
     /// Generates a filtered <see cref="IQueryable{T}"/>, based on its
